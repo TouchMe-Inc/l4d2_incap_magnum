@@ -9,8 +9,8 @@ public Plugin myinfo = {
 	name = "IncapMagnum",
 	author = "TouchMe",
 	description = "Gives incapped players a magnum",
-	version = "build0000",
-	url = "<- URL ->"
+	version = "build0001",
+	url = "https://github.com/TouchMe-Inc/l4d2_incap_magnum"
 }
 
 
@@ -91,7 +91,9 @@ Action Event_Incapacitated(Event event, const char[] sName, bool bDontBroadcast)
 	int iClient = GetClientOfUserId(GetEventInt(event, "userid"));
 	int iEntSecondaryWeapon = GetPlayerWeaponSlot(iClient, 1);
 
-	RemovePlayerItem(iClient, iEntSecondaryWeapon);
+	if (iEntSecondaryWeapon != -1) {
+		RemovePlayerItem(iClient, iEntSecondaryWeapon);
+	}
 
 	GivePlayerItem(iClient, "weapon_pistol_magnum");
 
