@@ -67,18 +67,14 @@ Action Event_IncapacitatedStart(Event event, const char[] sName, bool bDontBroad
 		GetEntPropString(iEntSecondaryWeapon, Prop_Data, "m_strMapSetScriptName", g_sWeaponStash[iClient], sizeof(g_sWeaponStash[]));
 	}
 
-	if (StrEqual(sEntClassName[7], "chainsaw", false)) {
+	else if (StrEqual(sEntClassName[7], "chainsaw", false) || StrEqual(sEntClassName[7], "pistol_magnum", false)) {
 		strcopy(g_sWeaponStash[iClient], sizeof(g_sWeaponStash[]), sEntClassName);
 	}
 
-	if (StrEqual(sEntClassName[7], "pistol", false))
+	else if (StrEqual(sEntClassName[7], "pistol", false))
 	{
 		strcopy(g_sWeaponStash[iClient], sizeof(g_sWeaponStash[]), sEntClassName);
 		g_bDualPistol[iClient] = view_as<bool>(GetEntProp(iEntSecondaryWeapon, Prop_Send, "m_isDualWielding"));
-	}
-
-	if (StrEqual(sEntClassName[7], "pistol_magnum", false)) {
-		strcopy(g_sWeaponStash[iClient], sizeof(g_sWeaponStash[]), sEntClassName);
 	}
 
 	RemovePlayerItem(iClient, iEntSecondaryWeapon);
