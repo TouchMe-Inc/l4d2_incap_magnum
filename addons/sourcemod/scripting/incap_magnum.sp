@@ -14,6 +14,9 @@ public Plugin myinfo = {
 }
 
 
+#define TEAM_SURVIVOR           2
+
+
 char g_sWeaponStash[MAXPLAYERS + 1][32];
 bool g_bDualPistol[MAXPLAYERS + 1];
 
@@ -85,6 +88,12 @@ Action Event_IncapacitatedStart(Event event, const char[] sName, bool bDontBroad
 Action Event_Incapacitated(Event event, const char[] sName, bool bDontBroadcast)
 {
 	int iClient = GetClientOfUserId(GetEventInt(event, "userid"));
+
+	// If the tank dies, the event is also activated.
+	if (!IsClientSurvivor(iClient)) {
+		return Plugin_Continue;
+	}
+
 	int iEntSecondaryWeapon = GetPlayerWeaponSlot(iClient, 1);
 
 	if (iEntSecondaryWeapon != -1) {
@@ -121,4 +130,11 @@ Action Event_ReviveSuccess(Event event, const char[] sName, bool bDontBroadcast)
 	}
 
 	return Plugin_Continue;
+}
+
+/**
+ * Survivor team player?
+ */
+bool IsClientSurvivor(int iClient) {
+	return (GetClientTeam(iClient) == TEAM_SURVIVOR);
 }
