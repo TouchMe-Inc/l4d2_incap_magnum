@@ -9,7 +9,7 @@ public Plugin myinfo = {
 	name = "IncapMagnum",
 	author = "TouchMe",
 	description = "Gives incapped players a magnum",
-	version = "build0001",
+	version = "build0002",
 	url = "https://github.com/TouchMe-Inc/l4d2_incap_magnum"
 }
 
@@ -18,6 +18,7 @@ public Plugin myinfo = {
 
 
 char g_sWeaponStash[MAXPLAYERS + 1][32];
+char g_sMeleeScript[MAXPLAYERS + 1][32];
 bool g_bDualPistol[MAXPLAYERS + 1];
 
 
@@ -48,6 +49,7 @@ public void OnPluginStart()
 	HookEvent("player_incapacitated_start", Event_IncapacitatedStart);
 	HookEvent("player_incapacitated", Event_Incapacitated);
 	HookEvent("revive_success", Event_ReviveSuccess);
+	HookEvent("player_death", Event_PlayerDeath, EventHookMode_Pre);
 }
 
 Action Event_IncapacitatedStart(Event event, const char[] sName, bool bDontBroadcast)
@@ -57,20 +59,22 @@ Action Event_IncapacitatedStart(Event event, const char[] sName, bool bDontBroad
 	int iEntSecondaryWeapon = GetPlayerWeaponSlot(iClient, 1);
 
 	g_sWeaponStash[iClient][0] = '\0';
+	g_sMeleeScript[iClient][0] = '\0';
 	g_bDualPistol[iClient] = false;
 
 	if (iEntSecondaryWeapon == -1) {
 		return Plugin_Continue;
 	}
 
-	char sEntClassName[64];
-	GetEdictClassname(iEntSecondaryWeapon, sEntClassName, sizeof(sEntClassName));
+	char sEntClassName[64]; GetEdictClassname(iEntSecondaryWeapon, sEntClassName, sizeof(sEntClassName));
 
-	if (StrEqual(sEntClassName[7], "melee", false)) {
-		GetEntPropString(iEntSecondaryWeapon, Prop_Data, "m_strMapSetScriptName", g_sWeaponStash[iClient], sizeof(g_sWeaponStash[]));
+	if (StrEqual(sEntClassName[7], "melee", false))
+	{
+		strcopy(g_sWeaponStash[iClient], sizeof(g_sWeaponStash[]), sEntClassName);
+		GetEntPropString(iEntSecondaryWeapon, Prop_Data, "m_strMapSetScriptName", g_sMeleeScript[iClient], sizeof(g_sMeleeScript[]));
 	}
 
-	else if (StrEqual(sEntClassName[7], "chainsaw", false) || StrEqual(sEntClassName[7], "pistol_magnum", false)) {
+	else if (StrEqual(sEntClassName[7], "pistol_magnum", false)) {
 		strcopy(g_sWeaponStash[iClient], sizeof(g_sWeaponStash[]), sEntClassName);
 	}
 
@@ -89,7 +93,6 @@ Action Event_Incapacitated(Event event, const char[] sName, bool bDontBroadcast)
 {
 	int iClient = GetClientOfUserId(GetEventInt(event, "userid"));
 
-	// If the tank dies, the event is also activated.
 	if (!IsClientSurvivor(iClient)) {
 		return Plugin_Continue;
 	}
@@ -122,7 +125,12 @@ Action Event_ReviveSuccess(Event event, const char[] sName, bool bDontBroadcast)
 
 	if (g_sWeaponStash[iClient][0] != '\0')
 	{
-		GivePlayerItem(iClient, g_sWeaponStash[iClient]);
+		if (StrEqual(g_sWeaponStash[iClient][7], "melee", false)) {
+			GivePlayerItem(iClient, g_sMeleeScript[iClient]);
+		} else {
+			GivePlayerItem(iClient, g_sWeaponStash[iClient]);
+		}
+
 
 		if (g_bDualPistol[iClient]) {
 			GivePlayerItem(iClient, g_sWeaponStash[iClient]);
@@ -130,6 +138,57 @@ Action Event_ReviveSuccess(Event event, const char[] sName, bool bDontBroadcast)
 	}
 
 	return Plugin_Continue;
+}
+
+Action Event_PlayerDeath(Event event, const char[] sName, bool bDontBroadcast)
+{
+	int iVictim = GetClientOfUserId(GetEventInt(event, "userid"));
+
+	if (!iVictim || !IsClientSurvivor(iVictim)) {
+		return Plugin_Continue;
+	}
+
+	SpawnSecondary(iVictim);
+
+	return Plugin_Continue;
+}
+
+bool SpawnSecondary(int iClient)
+{
+	if (g_sWeaponStash[iClient][0] == '\0') {
+		return false;
+	}
+
+	int iEnt = -1;
+
+	if (StrEqual(g_sWeaponStash[iClient][7], "melee", false))
+	{
+		iEnt = CreateEntityByName("weapon_melee");
+
+		if (iEnt == -1) {
+			return false;
+		}
+
+		DispatchKeyValue(iEnt, "melee_script_name", g_sMeleeScript[iClient]);
+	}
+
+	else if (StrEqual(g_sWeaponStash[iClient][7], "pistol_magnum", false)) {
+		iEnt = CreateEntityByName("weapon_pistol_magnum");
+	}
+
+	else if (StrEqual(g_sWeaponStash[iClient][7], "pistol", false)) {
+		iEnt = CreateEntityByName("weapon_pistol");
+	}
+
+	if (iEnt == -1) {
+		return false;
+	}
+
+	DispatchSpawn(iEnt);
+	float vOrigin[3]; GetClientEyePosition(iClient, vOrigin);
+	TeleportEntity(iEnt, vOrigin, NULL_VECTOR, NULL_VECTOR);
+
+	return true;
 }
 
 /**
